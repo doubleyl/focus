@@ -1,0 +1,221 @@
+.timer-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: var(--space-xl);
+    padding-bottom: var(--space-2xl);
+}
+
+/* ── Circular Timer ── */
+
+.timer-ring-container {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    animation: scaleIn 0.5s ease;
+}
+
+.timer-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.timer-ring-bg {
+    fill: none;
+    stroke: rgba(125, 87, 58, 0.12);
+    stroke-width: 6;
+}
+
+.timer-ring-progress {
+    fill: none;
+    stroke: url(#timerGradient);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.timer-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.timer-time {
+    font-size: 56px;
+    font-weight: 300;
+    font-family: var(--font-mono);
+    letter-spacing: 2px;
+    line-height: 1;
+    margin-bottom: var(--space-sm);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.timer-phase {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.timer-round {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+}
+
+/* ── Controls ── */
+
+.timer-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    animation: slideUp 0.5s ease 0.1s both;
+}
+
+.timer-btn-main {
+    min-width: 138px;
+    height: 58px;
+    padding: 0 var(--space-lg);
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all var(--transition-normal);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+}
+
+.timer-btn-main.start {
+    background: var(--accent-gradient);
+    box-shadow: var(--shadow-glow);
+}
+
+.timer-btn-main.start:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 40px var(--accent-glow);
+}
+
+.timer-btn-main.pause {
+    background: rgba(245, 158, 11, 0.2);
+    border: 2px solid rgba(245, 158, 11, 0.4);
+    color: #b86f16;
+}
+
+.timer-btn-main.pause:hover {
+    background: rgba(245, 158, 11, 0.3);
+    transform: scale(1.05);
+}
+
+.timer-btn-main.resume {
+    background: rgba(16, 185, 129, 0.2);
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    color: #1a7d5a;
+}
+
+.timer-btn-main.resume:hover {
+    background: rgba(16, 185, 129, 0.3);
+    transform: scale(1.05);
+}
+
+.timer-btn-main.pending-break {
+    background: rgba(240, 164, 95, 0.18);
+    border-color: rgba(240, 164, 95, 0.36);
+    color: #a55e24;
+}
+
+.timer-btn-main.pending-break:hover {
+    background: rgba(240, 164, 95, 0.28);
+}
+
+.timer-btn-secondary {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    color: var(--text-secondary);
+}
+
+.timer-btn-secondary:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-glow);
+    color: var(--text-primary);
+}
+
+.timer-btn-label {
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* ── Quick Settings ── */
+
+.timer-quick-settings {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    animation: slideUp 0.5s ease 0.2s both;
+}
+
+.timer-duration-chip {
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-xl);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    transition: all var(--transition-fast);
+}
+
+.timer-duration-chip:hover {
+    border-color: var(--border-glow);
+    color: var(--text-primary);
+}
+
+.timer-duration-chip.active {
+    background: var(--accent-soft);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* ── Mascot Preview ── */
+
+.timer-mascot-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 13px;
+    color: var(--text-muted);
+    animation: slideUp 0.5s ease 0.3s both;
+}
+
+.timer-mascot-emoji {
+    font-size: 24px;
+    animation: float 3s ease-in-out infinite;
+}
+
+.timer-mascot-image {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    animation: float 3s ease-in-out infinite;
+}

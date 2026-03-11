@@ -1,0 +1,138 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body, #root {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    font-family: "Avenir Next", "SF Pro Rounded", "PingFang SC", "Segoe UI", sans-serif;
+    background: transparent;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+}
+
+.quick-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.quick-card {
+    width: 100%;
+    height: 100%;
+    padding: 14px 16px 12px;
+    border-radius: 16px;
+    background: rgba(255, 249, 242, 0.92);
+    border: 1px solid rgba(125, 87, 58, 0.2);
+    box-shadow: 0 12px 30px rgba(120, 83, 54, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quick-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    -webkit-app-region: drag;
+}
+
+.quick-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #3b2b23;
+    letter-spacing: 0.4px;
+}
+
+.quick-close {
+    -webkit-app-region: no-drag;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 18px;
+    color: #8d6f5c;
+    padding: 2px 6px;
+}
+
+.quick-status {
+    font-size: 12px;
+    color: #755a49;
+}
+
+.quick-time {
+    font-size: 32px;
+    font-weight: 700;
+    color: #b04f2f;
+    letter-spacing: 1px;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.quick-btn {
+    -webkit-app-region: no-drag;
+    border-radius: 999px;
+    padding: 8px 12px;
+    border: 1px solid rgba(125, 87, 58, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+    color: #5b4436;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.quick-btn:hover {
+    border-color: rgba(204, 100, 61, 0.4);
+    color: #b04f2f;
+}
+
+.quick-btn.primary {
+    background: linear-gradient(135deg, #c45537 0%, #ef9c57 52%, #f8ce98 100%);
+    color: #fff;
+    border: none;
+}
+
+.quick-btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(204, 100, 61, 0.28);
+}
+
+.quick-btn.ghost {
+    background: transparent;
+}
+
+.quick-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.quick-link {
+    -webkit-app-region: no-drag;
+    border: none;
+    background: transparent;
+    color: #7a5a46;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.quick-link:hover {
+    color: #b04f2f;
+}
