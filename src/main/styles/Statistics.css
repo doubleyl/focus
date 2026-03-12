@@ -58,6 +58,20 @@
     margin-left: 4px;
 }
 
+.diff-value.positive {
+    background: var(--success, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.diff-value.negative {
+    background: var(--warning, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 /* ── Chart Section ── */
 
 .stats-chart-section {
@@ -71,6 +85,26 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: var(--space-lg);
+}
+
+.stats-chart-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+}
+
+.stats-date-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.stats-date-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 100px;
+    text-align: center;
 }
 
 .stats-chart-title {
@@ -119,10 +153,17 @@
     animation: slideUp 0.4s ease 0.3s both;
 }
 
+.stats-timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
 .stats-timeline-title {
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: var(--space-md);
+    margin-bottom: 0px;
 }
 
 .stats-timeline {

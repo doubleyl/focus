@@ -18,7 +18,7 @@ export default function Settings() {
     const [pendingSkinPath, setPendingSkinPath] = useState<string | null>(null);
     const [pendingSkinName, setPendingSkinName] = useState('');
     const [imageError, setImageError] = useState('');
-    const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
+    const [recordingTarget, setRecordingTarget] = useState<'quickPanel' | 'mascotEnlarge' | null>(null);
 
     useEffect(() => {
         window.electronAPI.settingsGet().then(setSettings);
@@ -81,7 +81,7 @@ export default function Settings() {
         e.stopPropagation();
 
         if (e.key === 'Escape') {
-            setIsRecordingShortcut(false);
+            setRecordingTarget(null);
             return;
         }
 
@@ -93,27 +93,23 @@ export default function Settings() {
 
         const key = e.key.toUpperCase();
         if (['META', 'CONTROL', 'ALT', 'SHIFT'].includes(key)) {
-            // Just modifier pressed, wait for the actual key
             return;
         }
 
-        // Map some keys to Electron standard
         let mappedKey = key;
         if (key === ' ') mappedKey = 'Space';
         else if (key === '+') mappedKey = 'Plus';
         else if (key.length === 1) mappedKey = key;
 
         if (keys.length === 0 && mappedKey.length === 1 && mappedKey >= 'A' && mappedKey <= 'Z') {
-            // Prevent binding simple letter keys without modifiers as global shortcuts
             return;
         }
 
         keys.push(mappedKey);
 
         if (keys.length > 0) {
-            const finalShortcut = keys.join('+');
-            update({ globalShortcut: finalShortcut });
-            setIsRecordingShortcut(false);
+            update({ globalShortcut: keys.join('+') });
+            setRecordingTarget(null);
         }
     };
 
@@ -254,23 +250,23 @@ export default function Settings() {
 
                 <div className="setting-row" style={{ opacity: settings.globalShortcutEnabled ? 1 : 0.5, pointerEvents: settings.globalShortcutEnabled ? 'auto' : 'none' }}>
                     <div>
-                        <div className="setting-label">自定义快捷键</div>
+                        <div className="setting-label">迷你面板快捷键</div>
                         <div className="setting-desc">点击右侧按钮后按下组合键</div>
                     </div>
                     <div className="setting-slider-group" style={{ flex: '1', maxWidth: '300px' }}>
                         <div
                             tabIndex={0}
-                            onClick={() => setIsRecordingShortcut(true)}
-                            onBlur={() => setIsRecordingShortcut(false)}
-                            onKeyDown={isRecordingShortcut ? handleShortcutKeyDown : undefined}
+                            onClick={() => setRecordingTarget('quickPanel')}
+                            onBlur={() => setRecordingTarget(null)}
+                            onKeyDown={recordingTarget === 'quickPanel' ? handleShortcutKeyDown : undefined}
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',
                                 fontSize: '14px',
                                 borderRadius: '6px',
-                                border: `1px solid ${isRecordingShortcut ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)'}`,
-                                background: isRecordingShortcut ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
-                                color: isRecordingShortcut ? 'var(--primary-color)' : 'white',
+                                border: `1px solid ${recordingTarget === 'quickPanel' ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)'}`,
+                                background: recordingTarget === 'quickPanel' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
+                                color: recordingTarget === 'quickPanel' ? 'var(--primary-color)' : 'white',
                                 textAlign: 'center',
                                 outline: 'none',
                                 cursor: 'pointer',
@@ -278,9 +274,50 @@ export default function Settings() {
                                 transition: 'all 0.2s',
                             }}
                         >
-                            {isRecordingShortcut
+                            {recordingTarget === 'quickPanel'
                                 ? '请按下快捷键 (Esc 取消)'
                                 : formatShortcut(settings.globalShortcut || 'CommandOrControl+Shift+F')}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="setting-row">
+                    <div>
+                        <div className="setting-label">玩偶放大按键</div>
+                        <div className="setting-desc">悬停玩偶时按住此键放大查看</div>
+                    </div>
+                    <div className="setting-slider-group" style={{ flex: '1', maxWidth: '300px' }}>
+                        <div
+                            tabIndex={0}
+                            onClick={() => setRecordingTarget('mascotEnlarge')}
+                            onBlur={() => setRecordingTarget(null)}
+                            onKeyDown={recordingTarget === 'mascotEnlarge' ? (e: React.KeyboardEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (e.key === 'Escape') { setRecordingTarget(null); return; }
+                                if (!['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) {
+                                    update({ mascotEnlargeKey: e.key.length === 1 ? e.key.toLowerCase() : e.key });
+                                    setRecordingTarget(null);
+                                }
+                            } : undefined}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                fontSize: '14px',
+                                borderRadius: '6px',
+                                border: `1px solid ${recordingTarget === 'mascotEnlarge' ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)'}`,
+                                background: recordingTarget === 'mascotEnlarge' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(0,0,0,0.2)',
+                                color: recordingTarget === 'mascotEnlarge' ? 'var(--primary-color)' : 'white',
+                                textAlign: 'center',
+                                outline: 'none',
+                                cursor: 'pointer',
+                                userSelect: 'none',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            {recordingTarget === 'mascotEnlarge'
+                                ? '请按下任意键 (Esc 取消)'
+                                : (settings.mascotEnlargeKey || 'e').toUpperCase()}
                         </div>
                     </div>
                 </div>
@@ -299,11 +336,29 @@ export default function Settings() {
                             type="range"
                             className="setting-slider"
                             min={20}
-                            max={64}
+                            max={96}
                             value={settings.mascotSize}
                             onChange={e => update({ mascotSize: +e.target.value })}
                         />
                         <span className="setting-slider-value">{settings.mascotSize}px</span>
+                    </div>
+                </div>
+                <div className="setting-row">
+                    <div>
+                        <div className="setting-label">放大倍数</div>
+                        <div className="setting-desc">悬停按键放大时的缩放系数</div>
+                    </div>
+                    <div className="setting-slider-group">
+                        <input
+                            type="range"
+                            className="setting-slider"
+                            min={1}
+                            max={5}
+                            step={0.5}
+                            value={settings.mascotEnlargeScale ?? 3}
+                            onChange={e => update({ mascotEnlargeScale: +e.target.value })}
+                        />
+                        <span className="setting-slider-value">{settings.mascotEnlargeScale ?? 3}x</span>
                     </div>
                 </div>
                 <div className="skin-grid">

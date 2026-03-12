@@ -4,7 +4,7 @@ import fs from 'fs';
 import { IPC_CHANNELS } from '../shared/types';
 import { startFocus, pauseTimer, resumeTimer, stopTimer, skipPhase, getTimerState, endBreak } from './timerService';
 import { getAllRecords, getRecordsByDate, getRecordsByRange, addRecord, deleteRecord, updateRecord, getSettings, updateSettings } from './dataStore';
-import { hideBreakWindow, showMainWindow, toggleQuickWindow } from './windowManager';
+import { hideBreakWindow, showMainWindow, toggleQuickWindow, getOverlayWindow } from './windowManager';
 import { updateGlobalShortcut } from './shortcutManager';
 
 const DIRECT_COPY_EXTENSIONS = new Set(['.svg']);
@@ -86,7 +86,20 @@ export function registerIpcHandlers() {
     // Break
     ipcMain.handle(IPC_CHANNELS.BREAK_HIDE, () => {
         hideBreakWindow();
-        showMainWindow();
     });
     ipcMain.handle(IPC_CHANNELS.BREAK_END, () => endBreak());
+
+    // Overlay
+    ipcMain.handle(IPC_CHANNELS.OVERLAY_SET_INTERACTIVE, (_e, interactive: boolean) => {
+        const overlay = getOverlayWindow();
+        if (overlay && !overlay.isDestroyed()) {
+            if (interactive) {
+                overlay.setIgnoreMouseEvents(false);
+                overlay.focus();
+            } else {
+                overlay.setIgnoreMouseEvents(true, { forward: true });
+                overlay.blur();
+            }
+        }
+    });
 }

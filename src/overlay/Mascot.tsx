@@ -32,65 +32,25 @@ function EdgeBar({
 }) {
     const t = BAR_THICKNESS;
 
-    // Base style: full-length bar in gray
     let barStyle: React.CSSProperties = { position: 'absolute', pointerEvents: 'none' };
-    // Fill overlay: green portion
     let fillStyle: React.CSSProperties = { position: 'absolute', pointerEvents: 'none', background: COMPLETED_COLOR };
 
     switch (edge) {
         case 'top':
-            barStyle = {
-                ...barStyle,
-                top: 0, left: 0,
-                width: screenWidth, height: t,
-                background: REMAINING_COLOR,
-            };
-            fillStyle = {
-                ...fillStyle,
-                top: 0, left: 0,
-                width: screenWidth * fill, height: t,
-            };
+            barStyle = { ...barStyle, top: 0, left: 0, width: screenWidth, height: t, background: REMAINING_COLOR };
+            fillStyle = { ...fillStyle, top: 0, left: 0, width: screenWidth * fill, height: t };
             break;
         case 'right':
-            barStyle = {
-                ...barStyle,
-                top: 0, right: 0,
-                width: t, height: screenHeight,
-                background: REMAINING_COLOR,
-            };
-            fillStyle = {
-                ...fillStyle,
-                top: 0, right: 0,
-                width: t, height: screenHeight * fill,
-            };
+            barStyle = { ...barStyle, top: 0, right: 0, width: t, height: screenHeight, background: REMAINING_COLOR };
+            fillStyle = { ...fillStyle, top: 0, right: 0, width: t, height: screenHeight * fill };
             break;
         case 'bottom':
-            barStyle = {
-                ...barStyle,
-                bottom: 0, left: 0,
-                width: screenWidth, height: t,
-                background: REMAINING_COLOR,
-            };
-            // Bottom fills right → left
-            fillStyle = {
-                ...fillStyle,
-                bottom: 0, right: 0,
-                width: screenWidth * fill, height: t,
-            };
+            barStyle = { ...barStyle, bottom: 0, left: 0, width: screenWidth, height: t, background: REMAINING_COLOR };
+            fillStyle = { ...fillStyle, bottom: 0, right: 0, width: screenWidth * fill, height: t };
             break;
         case 'left':
-            barStyle = {
-                ...barStyle,
-                top: 0, left: 0,
-                width: t, height: screenHeight,
-                background: REMAINING_COLOR,
-            };
-            // Left fills bottom → top
-            fillStyle = {
-                ...fillStyle,
-                bottom: 0, left: 0,
-                width: t, height: screenHeight * fill,
-            };
+            barStyle = { ...barStyle, top: 0, left: 0, width: t, height: screenHeight, background: REMAINING_COLOR };
+            fillStyle = { ...fillStyle, bottom: 0, left: 0, width: t, height: screenHeight * fill };
             break;
     }
 
@@ -102,10 +62,43 @@ function EdgeBar({
     );
 }
 
+/**
+ * Compute mascot div position so "feet" always touch the progress bar.
+ *
+ * The mascot moves along screen edges (top→right→bottom→left).
+ * Its "feet" should be flush against the thin progress bar at the edge.
+ * When enlarged, the mascot grows INWARD (toward screen center).
+ *
+ * @param pos       - center position & edge from calculateMascotPosition
+ * @param displaySize - the actual rendered size of the mascot (normal or enlarged)
+ * @param screenW   - screen width
+ * @param screenH   - screen height
+ */
+function getMascotLayout(pos: MascotPosition, displaySize: number, screenW: number, screenH: number) {
+    const half = displaySize / 2;
+
+    switch (pos.edge) {
+        case 'top':
+            // Feet at top (touching bar at y=BAR_THICKNESS), grows downward
+            return { left: pos.x - half, top: BAR_THICKNESS };
+        case 'right':
+            // Feet at right (touching bar), grows leftward
+            return { left: screenW - BAR_THICKNESS - displaySize, top: pos.y - half };
+        case 'bottom':
+            // Feet at bottom (touching bar), grows upward
+            return { left: pos.x - half, top: screenH - BAR_THICKNESS - displaySize };
+        case 'left':
+            // Feet at left (touching bar), grows rightward
+            return { left: BAR_THICKNESS, top: pos.y - half };
+    }
+}
+
 export default function Mascot() {
     const [timerState, setTimerState] = useState<TimerState | null>(null);
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [skinId, setSkinId] = useState('cat');
+    const [isHovered, setIsHovered] = useState(false);
+    const [isKeyHeld, setIsKeyHeld] = useState(false);
 
     useEffect(() => {
         window.electronAPI.timerGetState().then(setTimerState);
@@ -128,6 +121,40 @@ export default function Mascot() {
         };
     }, []);
 
+    // Single-key listener — works because overlay is focused when mouse enters mascot
+    useEffect(() => {
+        const enlargeKey = (settings?.mascotEnlargeKey || 'e').toLowerCase();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === enlargeKey) {
+                setIsKeyHeld(true);
+            }
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key.toLowerCase() === enlargeKey) {
+                setIsKeyHeld(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
+        };
+    }, [settings?.mascotEnlargeKey]);
+
+    const handleMouseEnter = () => {
+        setIsHovered(true);
+        window.electronAPI.overlaySetInteractive(true);
+    };
+
+    const handleMouseLeave = () => {
+        setIsHovered(false);
+        setIsKeyHeld(false);
+        window.electronAPI.overlaySetInteractive(false);
+    };
+
     if (!timerState || timerState.phase !== 'focusing') {
         return null;
     }
@@ -135,46 +162,55 @@ export default function Mascot() {
     const screenW = window.innerWidth;
     const screenH = window.innerHeight;
 
-    // Calculate progress
     const progress = timerState.totalSeconds > 0
         ? (timerState.totalSeconds - timerState.remainingSeconds) / timerState.totalSeconds
         : 0;
 
-    // Mascot position
     const mascotSize = settings?.mascotSize || DEFAULT_MASCOT_SIZE;
+    const enlargeScale = settings?.mascotEnlargeScale || 3;
     const pos: MascotPosition = calculateMascotPosition(progress, screenW, screenH, mascotSize);
-
-    // Progress bar segments
     const segments: ProgressBarSegments = calculateProgressSegments(progress, screenW, screenH);
-
-    // Skin Data (merge built-in and custom)
     const skin = getMascotSkin(skinId, settings?.customSkins);
 
-    // ... (rest kept below)
-    const halfSize = mascotSize / 2;
+    // Visual state
+    const isEnlarged = isHovered && isKeyHeld;
+    const isTransparent = isHovered && !isKeyHeld;
+    const mascotOpacity = isEnlarged ? 1 : isTransparent ? 0.2 : 1;
+
+    // Compute actual display size (no CSS scale — we size the div directly)
+    const displaySize = isEnlarged ? mascotSize * enlargeScale : mascotSize;
+
+    // Position: feet always touching the progress bar
+    const layout = getMascotLayout(pos, displaySize, screenW, screenH);
+
     return (
         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-            {/* Progress bars along all 4 edges */}
             <EdgeBar edge="top" fill={segments.top} screenWidth={screenW} screenHeight={screenH} />
             <EdgeBar edge="right" fill={segments.right} screenWidth={screenW} screenHeight={screenH} />
             <EdgeBar edge="bottom" fill={segments.bottom} screenWidth={screenW} screenHeight={screenH} />
             <EdgeBar edge="left" fill={segments.left} screenWidth={screenW} screenHeight={screenH} />
 
-            {/* Mascot — head facing screen center */}
+            {/* Mascot — feet pinned to progress bar, head faces screen center */}
             <div
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 style={{
                     position: 'absolute',
-                    left: pos.x - halfSize,
-                    top: pos.y - halfSize,
-                    width: mascotSize,
-                    height: mascotSize,
-                    fontSize: mascotSize - 8,
-                    lineHeight: `${mascotSize}px`,
+                    left: layout.left,
+                    top: layout.top,
+                    width: displaySize,
+                    height: displaySize,
+                    fontSize: displaySize - 8,
+                    lineHeight: `${displaySize}px`,
                     textAlign: 'center',
                     transform: `rotate(${pos.rotation}deg)`,
-                    filter: 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.4))',
-                    transition: 'left 0.95s linear, top 0.95s linear',
-                    pointerEvents: 'none',
+                    opacity: mascotOpacity,
+                    filter: isEnlarged
+                        ? 'drop-shadow(0 0 12px rgba(74, 222, 128, 0.6))'
+                        : 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.4))',
+                    transition: 'opacity 0.3s ease, width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease, filter 0.3s ease',
+                    pointerEvents: 'auto',
+                    cursor: isHovered ? 'pointer' : 'default',
                     zIndex: 10,
                 }}
             >

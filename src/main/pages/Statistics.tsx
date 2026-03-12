@@ -1,9 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../store';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import '../styles/Statistics.css';
 
 type ViewMode = 'week' | 'month';
+
+function formatDiff(diffSeconds: number): string {
+    if (diffSeconds === 0) return '持平';
+    const isPositive = diffSeconds > 0;
+    const absDiff = Math.abs(diffSeconds);
+    const h = Math.floor(absDiff / 3600);
+    const m = Math.floor((absDiff % 3600) / 60);
+    if (h === 0 && m === 0) return '持平';
+    const timeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+    return `${isPositive ? '+' : '-'} ${timeStr}`;
+}
+
+function formatDateDisplay(dateStr: string): string {
+    const d = new Date(`${dateStr}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = getDateStr(today);
+    if (dateStr === todayStr) return '今天';
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getDateStr(yesterday);
+    if (dateStr === yesterdayStr) return '昨天';
+
+    return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
 
 function formatDuration(seconds: number): string {
     const h = Math.floor(seconds / 3600);
@@ -24,6 +51,16 @@ function getDayLabel(dateStr: string): string {
 export default function Statistics() {
     const { records, setRecords } = useAppStore();
     const [viewMode, setViewMode] = useState<ViewMode>('week');
+    const [timelineDate, setTimelineDate] = useState<Date>(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    });
+    const [trendEndDate, setTrendEndDate] = useState<Date>(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    });
 
     useEffect(() => {
         window.electronAPI.recordsGetAll().then(setRecords);
@@ -33,18 +70,28 @@ export default function Statistics() {
     today.setHours(0, 0, 0, 0);
     const todayStr = getDateStr(today);
 
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getDateStr(yesterday);
+
     const todayRecords = useMemo(
         () => records.filter((record) => getDateStr(new Date(record.startTime)) === todayStr),
         [records, todayStr]
     );
 
-    const todayTotalSeconds = todayRecords.reduce((sum, record) => sum + record.duration, 0);
-    const todayCompletedCount = todayRecords.filter((record) => record.completed).length;
+    const yesterdayRecords = useMemo(
+        () => records.filter((record) => getDateStr(new Date(record.startTime)) === yesterdayStr),
+        [records, yesterdayStr]
+    );
 
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 6);
-    const weekRecords = records.filter((record) => record.startTime >= weekAgo.getTime());
-    const weekTotalSeconds = weekRecords.reduce((sum, record) => sum + record.duration, 0);
+    const todayTotalSeconds = todayRecords.reduce((sum, record) => sum + record.duration, 0);
+    const yesterdayTotalSeconds = yesterdayRecords.reduce((sum, record) => sum + record.duration, 0);
+    const diffSeconds = todayTotalSeconds - yesterdayTotalSeconds;
+    const diffDisplay = formatDiff(diffSeconds);
+    const isDiffPositive = diffSeconds > 0;
+    const isDiffNegative = diffSeconds < 0;
+
+    const todayCompletedCount = todayRecords.filter((record) => record.completed).length;
 
     const streak = useMemo(() => {
         let count = 0;
@@ -63,7 +110,7 @@ export default function Statistics() {
     const chartData = useMemo(() => {
         const data = [];
         for (let i = periodDays - 1; i >= 0; i--) {
-            const d = new Date(today);
+            const d = new Date(trendEndDate);
             d.setDate(d.getDate() - i);
             const ds = getDateStr(d);
             const dayRecords = records.filter((record) => getDateStr(new Date(record.startTime)) === ds);
@@ -74,11 +121,37 @@ export default function Statistics() {
             });
         }
         return data;
-    }, [records, periodDays, today]);
+    }, [records, periodDays, trendEndDate]);
 
-    const timelineRecords = todayRecords;
+    const timelineRecords = useMemo(
+        () => records.filter((record) => getDateStr(new Date(record.startTime)) === getDateStr(timelineDate)),
+        [records, timelineDate]
+    );
 
     const timelineTotalSeconds = timelineRecords.reduce((sum, record) => sum + record.duration, 0);
+
+    const navigateTimeline = (offset: number) => {
+        const d = new Date(timelineDate);
+        d.setDate(d.getDate() + offset);
+        setTimelineDate(d);
+    };
+
+    const navigateTrend = (offset: number) => {
+        const d = new Date(trendEndDate);
+        // By default, move by periodDays, but a bit of overlap can be nice, let's just shift by period
+        d.setDate(d.getDate() + offset * periodDays);
+
+        // Prevent navigating beyond today
+        const maxDate = new Date();
+        maxDate.setHours(0, 0, 0, 0);
+        if (d > maxDate) {
+            setTrendEndDate(maxDate);
+        } else {
+            setTrendEndDate(d);
+        }
+    };
+
+    const isTrendAtLatest = getDateStr(trendEndDate) === getDateStr(new Date());
 
     const timelineBlocks = useMemo(() => {
         return timelineRecords.map((record) => {
@@ -134,8 +207,10 @@ export default function Statistics() {
                     </div>
                 </div>
                 <div className="glass stats-card">
-                    <div className="stats-card-label">本周累计</div>
-                    <div className="stats-card-value">{formatDuration(weekTotalSeconds)}</div>
+                    <div className="stats-card-label">较昨日</div>
+                    <div className={`stats-card-value diff-value ${isDiffPositive ? 'positive' : ''} ${isDiffNegative ? 'negative' : ''}`}>
+                        {diffDisplay}
+                    </div>
                 </div>
                 <div className="glass stats-card">
                     <div className="stats-card-label">连续天数</div>
@@ -148,7 +223,25 @@ export default function Statistics() {
 
             <div className="glass stats-chart-section">
                 <div className="stats-chart-header">
-                    <h2 className="stats-chart-title">专注趋势</h2>
+                    <div className="stats-chart-header-left">
+                        <h2 className="stats-chart-title">专注趋势</h2>
+                        <div className="stats-date-nav">
+                            <button className="btn btn-ghost btn-icon" onClick={() => navigateTrend(-1)}>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="stats-date-text">
+                                {formatDateDisplay(getDateStr(new Date(trendEndDate.getTime() - (periodDays - 1) * 86400000)))} - {formatDateDisplay(getDateStr(trendEndDate))}
+                            </span>
+                            <button
+                                className="btn btn-ghost btn-icon"
+                                onClick={() => navigateTrend(1)}
+                                disabled={isTrendAtLatest}
+                                style={{ opacity: isTrendAtLatest ? 0.3 : 1, cursor: isTrendAtLatest ? 'default' : 'pointer' }}
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
                     <div className="stats-chart-tabs">
                         <button
                             className={`stats-chart-tab ${viewMode === 'week' ? 'active' : ''}`}
@@ -207,10 +300,28 @@ export default function Statistics() {
             </div>
 
             <div className="glass stats-timeline-section">
-                <h2 className="stats-timeline-title">今日专注时间轴</h2>
-                <p style={{ marginTop: 6, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12 }}>
-                    {formatDuration(timelineTotalSeconds)}
-                </p>
+                <div className="stats-timeline-header">
+                    <div>
+                        <h2 className="stats-timeline-title">专注时间轴</h2>
+                        <p style={{ marginTop: 6, marginBottom: 0, color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>
+                            {formatDuration(timelineTotalSeconds)}
+                        </p>
+                    </div>
+                    <div className="stats-date-nav">
+                        <button className="btn btn-ghost btn-icon" onClick={() => navigateTimeline(-1)}>
+                            <ChevronLeft size={18} />
+                        </button>
+                        <span className="stats-date-text" style={{ fontSize: 14 }}>{formatDateDisplay(getDateStr(timelineDate))}</span>
+                        <button
+                            className="btn btn-ghost btn-icon"
+                            onClick={() => navigateTimeline(1)}
+                            disabled={getDateStr(timelineDate) === getDateStr(new Date())}
+                            style={{ opacity: getDateStr(timelineDate) === getDateStr(new Date()) ? 0.3 : 1, cursor: getDateStr(timelineDate) === getDateStr(new Date()) ? 'default' : 'pointer' }}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+                </div>
 
                 {timelineBlocks.length > 0 ? (
                     <>

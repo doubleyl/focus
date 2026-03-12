@@ -75,6 +75,14 @@ export default function App() {
         setIsEnding(payload.mode === 'focusReady');
         setShowParticles(payload.mode === 'focusReady');
         setVisible(true);
+
+        // Auto-dismiss breakRunning after 5 seconds so it doesn't block the user
+        if (payload.mode === 'breakRunning') {
+            hideTimeoutRef.current = setTimeout(() => {
+                setVisible(false);
+                window.electronAPI.breakHide();
+            }, 5000);
+        }
     };
 
     useEffect(() => {

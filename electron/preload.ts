@@ -52,6 +52,9 @@ const electronAPI = {
     },
     breakHide: () => ipcRenderer.invoke(IPC_CHANNELS.BREAK_HIDE),
     breakEnd: () => ipcRenderer.invoke(IPC_CHANNELS.BREAK_END),
+
+    // Overlay
+    overlaySetInteractive: (interactive: boolean) => ipcRenderer.invoke(IPC_CHANNELS.OVERLAY_SET_INTERACTIVE, interactive),
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

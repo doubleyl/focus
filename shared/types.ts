@@ -40,6 +40,8 @@ export interface AppSettings {
     customSkins: MascotSkin[];
     globalShortcutEnabled: boolean; // whether the quick panel shortcut is enabled
     globalShortcut: string;         // the actual accelerator string (e.g. CommandOrControl+Shift+F)
+    mascotEnlargeKey: string;       // single key for mascot enlarge while hovering (e.g. 'e')
+    mascotEnlargeScale: number;     // scale factor when enlarged (e.g. 3)
 }
 
 // === IPC Channel Names ===
@@ -80,6 +82,10 @@ export const IPC_CHANNELS = {
     BREAK_SHOW: 'break:show',
     BREAK_HIDE: 'break:hide',
     BREAK_END: 'break:end',
+
+    // Overlay
+    OVERLAY_SET_INTERACTIVE: 'overlay:set-interactive',
+    OVERLAY_TOGGLE_ENLARGE: 'overlay:toggle-enlarge',
 } as const;
 
 export interface BreakOverlayPayload {
@@ -139,4 +145,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     customSkins: [],
     globalShortcutEnabled: true,
     globalShortcut: 'CommandOrControl+Shift+F',
+    mascotEnlargeKey: 'e',
+    mascotEnlargeScale: 3,
 };
