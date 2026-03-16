@@ -88,18 +88,4 @@ export function registerIpcHandlers() {
         hideBreakWindow();
     });
     ipcMain.handle(IPC_CHANNELS.BREAK_END, () => endBreak());
-
-    // Overlay
-    ipcMain.handle(IPC_CHANNELS.OVERLAY_SET_INTERACTIVE, (_e, interactive: boolean) => {
-        const overlay = getOverlayWindow();
-        if (overlay && !overlay.isDestroyed()) {
-            if (interactive) {
-                overlay.setIgnoreMouseEvents(false);
-                overlay.focus();
-            } else {
-                overlay.setIgnoreMouseEvents(true, { forward: true });
-                overlay.blur();
-            }
-        }
-    });
 }

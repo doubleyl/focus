@@ -76,7 +76,7 @@ export default function Settings() {
         return formattedParts.join(isMac ? '' : ' + ');
     };
 
-    const handleShortcutKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const handleShortcutKeyDown = (target: 'quickPanel' | 'mascotEnlarge') => (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -108,7 +108,12 @@ export default function Settings() {
         keys.push(mappedKey);
 
         if (keys.length > 0) {
-            update({ globalShortcut: keys.join('+') });
+            const finalShortcut = keys.join('+');
+            if (target === 'quickPanel') {
+                update({ globalShortcut: finalShortcut });
+            } else {
+                update({ mascotEnlargeShortcut: finalShortcut });
+            }
             setRecordingTarget(null);
         }
     };
@@ -258,7 +263,7 @@ export default function Settings() {
                             tabIndex={0}
                             onClick={() => setRecordingTarget('quickPanel')}
                             onBlur={() => setRecordingTarget(null)}
-                            onKeyDown={recordingTarget === 'quickPanel' ? handleShortcutKeyDown : undefined}
+                            onKeyDown={recordingTarget === 'quickPanel' ? handleShortcutKeyDown('quickPanel') : undefined}
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -283,23 +288,15 @@ export default function Settings() {
 
                 <div className="setting-row">
                     <div>
-                        <div className="setting-label">玩偶放大按键</div>
-                        <div className="setting-desc">悬停玩偶时按住此键放大查看</div>
+                        <div className="setting-label">玩偶全局放大快捷键</div>
+                        <div className="setting-desc">随时按下此组合键切换玩偶放大状态</div>
                     </div>
                     <div className="setting-slider-group" style={{ flex: '1', maxWidth: '300px' }}>
                         <div
                             tabIndex={0}
                             onClick={() => setRecordingTarget('mascotEnlarge')}
                             onBlur={() => setRecordingTarget(null)}
-                            onKeyDown={recordingTarget === 'mascotEnlarge' ? (e: React.KeyboardEvent) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (e.key === 'Escape') { setRecordingTarget(null); return; }
-                                if (!['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) {
-                                    update({ mascotEnlargeKey: e.key.length === 1 ? e.key.toLowerCase() : e.key });
-                                    setRecordingTarget(null);
-                                }
-                            } : undefined}
+                            onKeyDown={recordingTarget === 'mascotEnlarge' ? handleShortcutKeyDown('mascotEnlarge') : undefined}
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',
@@ -316,8 +313,8 @@ export default function Settings() {
                             }}
                         >
                             {recordingTarget === 'mascotEnlarge'
-                                ? '请按下任意键 (Esc 取消)'
-                                : (settings.mascotEnlargeKey || 'e').toUpperCase()}
+                                ? '请按下快捷键 (Esc 取消)'
+                                : formatShortcut(settings.mascotEnlargeShortcut || 'Alt+E')}
                         </div>
                     </div>
                 </div>

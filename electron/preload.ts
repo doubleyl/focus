@@ -54,7 +54,16 @@ const electronAPI = {
     breakEnd: () => ipcRenderer.invoke(IPC_CHANNELS.BREAK_END),
 
     // Overlay
-    overlaySetInteractive: (interactive: boolean) => ipcRenderer.invoke(IPC_CHANNELS.OVERLAY_SET_INTERACTIVE, interactive),
+    onOverlayToggleEnlarge: (callback: () => void) => {
+        const handler = () => callback();
+        ipcRenderer.on(IPC_CHANNELS.OVERLAY_TOGGLE_ENLARGE, handler);
+        return () => ipcRenderer.removeListener(IPC_CHANNELS.OVERLAY_TOGGLE_ENLARGE, handler);
+    },
+    onOverlayMousePosition: (callback: (pos: { x: number, y: number }) => void) => {
+        const handler = (_event: Electron.IpcRendererEvent, pos: { x: number, y: number }) => callback(pos);
+        ipcRenderer.on(IPC_CHANNELS.OVERLAY_MOUSE_POSITION, handler);
+        return () => ipcRenderer.removeListener(IPC_CHANNELS.OVERLAY_MOUSE_POSITION, handler);
+    },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

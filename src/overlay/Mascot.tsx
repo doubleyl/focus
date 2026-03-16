@@ -97,8 +97,12 @@ export default function Mascot() {
     const [timerState, setTimerState] = useState<TimerState | null>(null);
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [skinId, setSkinId] = useState('cat');
-    const [isHovered, setIsHovered] = useState(false);
-    const [isKeyHeld, setIsKeyHeld] = useState(false);
+
+    // The mascot is purely visual now. It only toggles enlargement via global shortcut.
+    const [isEnlarged, setIsEnlarged] = useState(false);
+
+    // Track global mouse position for edge-based transparency
+    const [mousePos, setMousePos] = useState<{ x: number, y: number } | null>(null);
 
     useEffect(() => {
         window.electronAPI.timerGetState().then(setTimerState);
@@ -114,46 +118,24 @@ export default function Mascot() {
             setSkinId(s.mascotSkin);
         });
 
+        // Listen for global shortcut toggle from main process
+        const unsubEnlarge = window.electronAPI.onOverlayToggleEnlarge(() => {
+            setIsEnlarged(prev => !prev);
+        });
+
+        // Listen for mouse position to handle edge-based transparency
+        const unsubMouse = window.electronAPI.onOverlayMousePosition((pos) => {
+            setMousePos(pos);
+        });
+
         return () => {
             unsubTick();
             unsubPhase();
             unsubSettings();
+            unsubEnlarge();
+            unsubMouse();
         };
     }, []);
-
-    // Single-key listener — works because overlay is focused when mouse enters mascot
-    useEffect(() => {
-        const enlargeKey = (settings?.mascotEnlargeKey || 'e').toLowerCase();
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === enlargeKey) {
-                setIsKeyHeld(true);
-            }
-        };
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === enlargeKey) {
-                setIsKeyHeld(false);
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        document.addEventListener('keyup', handleKeyUp);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-            document.removeEventListener('keyup', handleKeyUp);
-        };
-    }, [settings?.mascotEnlargeKey]);
-
-    const handleMouseEnter = () => {
-        setIsHovered(true);
-        window.electronAPI.overlaySetInteractive(true);
-    };
-
-    const handleMouseLeave = () => {
-        setIsHovered(false);
-        setIsKeyHeld(false);
-        window.electronAPI.overlaySetInteractive(false);
-    };
 
     if (!timerState || timerState.phase !== 'focusing') {
         return null;
@@ -172,16 +154,37 @@ export default function Mascot() {
     const segments: ProgressBarSegments = calculateProgressSegments(progress, screenW, screenH);
     const skin = getMascotSkin(skinId, settings?.customSkins);
 
-    // Visual state
-    const isEnlarged = isHovered && isKeyHeld;
-    const isTransparent = isHovered && !isKeyHeld;
-    const mascotOpacity = isEnlarged ? 1 : isTransparent ? 0.2 : 1;
-
     // Compute actual display size (no CSS scale — we size the div directly)
     const displaySize = isEnlarged ? mascotSize * enlargeScale : mascotSize;
 
     // Position: feet always touching the progress bar
     const layout = getMascotLayout(pos, displaySize, screenW, screenH);
+
+    // Compute edge-based transparency: if mouse is near the edge where the mascot is
+    let opacity = 1;
+    if (mousePos && !isEnlarged) {
+        const threshold = 60; // Pixels from the edge to trigger transparency
+        let distanceToEdge = Infinity;
+
+        switch (pos.edge) {
+            case 'top':
+                distanceToEdge = mousePos.y;
+                break;
+            case 'right':
+                distanceToEdge = screenW - mousePos.x;
+                break;
+            case 'bottom':
+                distanceToEdge = screenH - mousePos.y;
+                break;
+            case 'left':
+                distanceToEdge = mousePos.x;
+                break;
+        }
+
+        if (distanceToEdge < threshold) {
+            opacity = 0.2; // Become transparent if mouse is near this edge
+        }
+    }
 
     return (
         <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -190,10 +193,8 @@ export default function Mascot() {
             <EdgeBar edge="bottom" fill={segments.bottom} screenWidth={screenW} screenHeight={screenH} />
             <EdgeBar edge="left" fill={segments.left} screenWidth={screenW} screenHeight={screenH} />
 
-            {/* Mascot — feet pinned to progress bar, head faces screen center */}
+            {/* Mascot — pointerEvents: 'none' ensures 100% click-through */}
             <div
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
                 style={{
                     position: 'absolute',
                     left: layout.left,
@@ -204,13 +205,12 @@ export default function Mascot() {
                     lineHeight: `${displaySize}px`,
                     textAlign: 'center',
                     transform: `rotate(${pos.rotation}deg)`,
-                    opacity: mascotOpacity,
+                    opacity: opacity,
                     filter: isEnlarged
                         ? 'drop-shadow(0 0 12px rgba(74, 222, 128, 0.6))'
                         : 'drop-shadow(0 0 6px rgba(74, 222, 128, 0.4))',
                     transition: 'opacity 0.3s ease, width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease, filter 0.3s ease',
-                    pointerEvents: 'auto',
-                    cursor: isHovered ? 'pointer' : 'default',
+                    pointerEvents: 'none', // Critical: absolutely no interaction
                     zIndex: 10,
                 }}
             >

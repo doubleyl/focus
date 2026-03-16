@@ -99,7 +99,7 @@ export function createOverlayWindow(): BrowserWindow {
         skipTaskbar: true,
         resizable: false,
         hasShadow: false,
-        focusable: true,
+        focusable: false,
         show: false,
         webPreferences: {
             preload: preloadPath,

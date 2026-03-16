@@ -2,11 +2,12 @@ import { app, BrowserWindow, protocol, net, powerMonitor, globalShortcut } from 
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { createMainWindow, createOverlayWindow, createBreakWindow, createQuickWindow, showMainWindow, getAllWindows, toggleQuickWindow } from './windowManager';
+import { createMainWindow, createOverlayWindow, createBreakWindow, createQuickWindow, showMainWindow, getAllWindows, toggleQuickWindow, getOverlayWindow } from './windowManager';
 import { createTray } from './trayManager';
 import { registerIpcHandlers } from './ipcHandlers';
 import { pauseTimer, getTimerState, resumeTimer } from './timerService';
 import { getSettings } from './dataStore';
+import { IPC_CHANNELS } from '../shared/types';
 
 app.setName('Focus');
 app.setPath('userData', path.join(app.getPath('appData'), 'focus'));
@@ -83,6 +84,34 @@ protocol.registerSchemesAsPrivileged([
     }
 ]);
 
+import { screen } from 'electron';
+
+let mousePollInterval: NodeJS.Timeout | null = null;
+const MOUSE_POLL_INTERVAL_MS = 100;
+
+function startMousePolling() {
+    if (mousePollInterval) return;
+    mousePollInterval = setInterval(() => {
+        const overlay = getOverlayWindow();
+        if (overlay && !overlay.isDestroyed()) {
+            const point = screen.getCursorScreenPoint();
+            overlay.webContents.send(IPC_CHANNELS.OVERLAY_MOUSE_POSITION, point);
+        }
+    }, MOUSE_POLL_INTERVAL_MS);
+}
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+    if (idleInterval) {
+        clearInterval(idleInterval);
+        idleInterval = null;
+    }
+    if (mousePollInterval) {
+        clearInterval(mousePollInterval);
+        mousePollInterval = null;
+    }
+});
+
 app.whenReady().then(() => {
     // Handle the focus-local custom protocol
     protocol.handle('focus-local', (request) => {
@@ -99,6 +128,7 @@ app.whenReady().then(() => {
 
     registerIpcHandlers();
 
+    // Existing window creations
     createMainWindow();
     createOverlayWindow();
     createBreakWindow();
@@ -106,6 +136,9 @@ app.whenReady().then(() => {
     createTray();
     updateGlobalShortcut();
     startIdleMonitor();
+
+    // Start polling mouse for mascot edge-transparency
+    startMousePolling();
 });
 
 app.on('window-all-closed', () => {
@@ -130,12 +163,4 @@ app.on('before-quit', () => {
         win.removeAllListeners('close');
         win.close();
     });
-});
-
-app.on('will-quit', () => {
-    globalShortcut.unregisterAll();
-    if (idleInterval) {
-        clearInterval(idleInterval);
-        idleInterval = null;
-    }
 });

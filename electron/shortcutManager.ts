@@ -1,6 +1,7 @@
 import { globalShortcut } from 'electron';
+import { IPC_CHANNELS } from '../shared/types';
 import { getSettings } from './dataStore';
-import { toggleQuickWindow } from './windowManager';
+import { toggleQuickWindow, getOverlayWindow } from './windowManager';
 
 export function updateGlobalShortcut() {
     globalShortcut.unregisterAll();
@@ -17,6 +18,23 @@ export function updateGlobalShortcut() {
             }
         } catch (e) {
             console.error('Error registering global shortcut:', e);
+        }
+    }
+
+    // Mascot enlarge shortcut
+    if (settings.mascotEnlargeShortcut) {
+        try {
+            const ok = globalShortcut.register(settings.mascotEnlargeShortcut, () => {
+                const overlay = getOverlayWindow();
+                if (overlay && !overlay.isDestroyed()) {
+                    overlay.webContents.send(IPC_CHANNELS.OVERLAY_TOGGLE_ENLARGE);
+                }
+            });
+            if (!ok) {
+                console.warn(`Failed to register mascot enlarge shortcut ${settings.mascotEnlargeShortcut}`);
+            }
+        } catch (e) {
+            console.error('Error registering mascot enlarge shortcut:', e);
         }
     }
 }
